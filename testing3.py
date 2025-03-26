@@ -229,7 +229,6 @@ def searchLine():
     hasChangedServo = True
     correctServoTime = time.time()
     
-
 def detectLine(frame): #Function used to detect the line and returns the correction value for PID
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
