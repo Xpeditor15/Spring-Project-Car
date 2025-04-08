@@ -1,4 +1,4 @@
-#Code optimized by Grok, but not
+#Code optimized by Grok, but not fully functional
 
 import cv2
 import numpy as np
