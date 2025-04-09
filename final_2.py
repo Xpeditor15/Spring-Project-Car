@@ -236,69 +236,7 @@ def main():
     print("Line follower started. Press 'q' in the display window or Ctrl+C to stop.")
     
     try:
-        while True:
-            frame = picam2.capture_array()
-            # Adjusted to unpack three return values.
-            error, line_found, intersection = detect_line(frame)
-            cv2.imshow("Line Follower", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-            
-            if state == "NORMAL":
-                if line_found:
-                    if error > TURN_THRESHOLD:
-                        pivot_turn_right(right_pwm, left_pwm)
-                        print("Pivot Turning Right")
-                    elif error < -TURN_THRESHOLD:
-                        pivot_turn_left(right_pwm, left_pwm)
-                        print("Pivot Turning Left")
-                    else:
-                        move_forward(right_pwm, left_pwm)
-                        print("Moving Forward")
-                else:
-                    print("Line lost. Reversing...")
-                    state = "REVERSING"
-                    reverse_start_time = time.time()
-                    move_backward(right_pwm, left_pwm, REVERSE_SPEED)
-            
-            elif state == "REVERSING":
-                if time.time() - reverse_start_time >= REVERSE_DURATION:
-                    stop_motors(right_pwm, left_pwm)
-                    print("Beginning scan for line...")
-                    state = "SCANNING"
-                    current_scan_index = 0
-                    # Set servo to first scan angle
-                    set_servo_angle_simple(servo_pwm, SCAN_ANGLES[current_scan_index])
-                    scan_start_time = time.time()
-            
-            elif state == "SCANNING":
-                if time.time() - scan_start_time >= SCAN_TIME_PER_ANGLE:
-                    frame = picam2.capture_array()
-                    error, line_found, intersection = detect_line(frame)
-                    # Check if an intersection is detected
-                    if intersection:
-                        print("Intersection detected. Centering servo to 90ï¿½ and adjusting.")
-                        set_servo_angle_simple(servo_pwm, 90)
-                        state = "NORMAL"
-                    elif line_found:
-                        detected_scan_angle = SCAN_ANGLES[current_scan_index]
-                        print(f"Line detected during scan at servo angle: {detected_scan_angle}")
-                        state = "TURNING"
-                    else:
-                        current_scan_index += 1
-                        if current_scan_index < len(SCAN_ANGLES):
-                            set_servo_angle_simple(servo_pwm, SCAN_ANGLES[current_scan_index])
-                            scan_start_time = time.time()
-                        else:
-                            print("No line found during scan. Reversing again...")
-                            state = "REVERSING"
-                            move_backward(right_pwm, left_pwm, REVERSE_SPEED)
-                            reverse_start_time = time.time()
-            
-            elif state == "TURNING":
-                if detected_scan_angle is not None:
-                    turn_with_scanned_angle(detected_scan_angle, servo_pwm, right_pwm, left_pwm)
-                state = "NORMAL"
+        move_forward(100, 100)
             
     except KeyboardInterrupt:
         print("\nProgram stopped by user")
