@@ -1,3 +1,5 @@
+#code from friend that doesn't use PID
+
 import RPi.GPIO as GPIO
 import time
 import numpy as np

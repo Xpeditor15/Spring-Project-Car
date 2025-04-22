@@ -1,3 +1,5 @@
+#uses PID for movement, has issues with pid values as car is oscillating very quickly
+
 import cv2
 import numpy as np
 import RPi.GPIO as gpio
