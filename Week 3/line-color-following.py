@@ -122,7 +122,7 @@ def setupGPIO():
     rightPWM.start(0)               # Start with 0% duty cycle
     leftPWM.start(0)                # Start with 0% duty cycle
 
-    servoPWM = gpio.PWM(servoPWM, 50)  # 50Hz frequency for servo
+    servoPWM = gpio.PWM(ServoMotor, 50)  # 50Hz frequency for servo
     servoPWM.start(0)                # Start with 0% duty cycle
 
     return rightPWM, leftPWM, servoPWM
@@ -325,6 +325,8 @@ currentScanIndex = 0
 scanStartTime = 0
 detectedScanAngle = None
 
+ifCalibrated = False
+
 try:
     priorityInput = input("Enter the colors that you want to follow")
     priorityColors = []
@@ -336,11 +338,15 @@ try:
         priorityColors.append("red")
     if 'y' in priorityInput:
         priorityColors.append("yellow")
+
     priorityColors = list(set(priorityColors))[:4]  # Limit to 4 unique colors
     print(f"Following colors: {priorityColors}")
 
     while True:
         frame = cam.capture_array()
+        if not ifCalibrated:
+            calibrateColors(frame)
+            ifCalibrated = True
         detectLine(frame)
         global allContours
         cv2.imshow("Line follower", frame)
