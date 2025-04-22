@@ -191,7 +191,7 @@ def detectLine(frame):
     maskBlack = cv2.inRange(hsv, lower_black, upper_black)
     maskBlack = cv2.erode(maskBlack, kernel, iterations=1)
     maskBlack = cv2.dilate(maskBlack, kernel, iterations=1)
-    contoursBlack, _ = cv2.findContours(maskBlack, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\
+    contoursBlack, _ = cv2.findContours(maskBlack, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contoursBlack:
         validContoursBlack = [cnt for cnt in contoursBlack if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
         if len(validContoursBlack) > 1:
@@ -299,9 +299,36 @@ def detectLine(frame):
                             cv2.line(frame, (centerX, cy), (cx, cy), (0, 255, 0), 2)
                             cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
                             return error, True, intersection
+    
+    allContours = []
+
+    if len(priorityColors) > 0:  # User wants to follow colored line
+        if 'red' in priorityColors:
+            maskRed = cv2.inRange(hsv, lower_red, upper_red)
+            maskRed = cv2.erode(maskRed, kernel, iterations=1)
+            maskRed = cv2.dilate(maskRed, kernel, iterations=1)
+            contoursRed, _ = cv2.findContours(maskRed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contoursRed:
+                validContoursRed = [cnt for cnt in contoursRed if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
+                if len(validContoursRed) > 1:
+                    intersection = True
+                if validContoursRed:
+                    largestContour = max(validContoursRed, key=cv2.contourArea)
+                    area = cv2.contourArea(largestContour)
+                    M = cv2.moments(largestContour)
+                    cv2.drawContours(frame, [largestContour], -1, (0, 255, 0), 2)
+                    if M["m00"] != 0:
+                        cx = int(M["m10"] / M["m00"])
+                        cy = int(M["m01"] / M["m00"])
+                        cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
+                        error = cx - centerX
+                        cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
+                        cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                        allContours.append = [error, True, intersection]
+            
         
 
-    if len(priorityColors) > 0:  # Only wants to follow black line
+
         
 
 
