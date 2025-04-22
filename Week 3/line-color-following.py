@@ -86,13 +86,13 @@ def moveForward(rightPWM, leftPWM):
     rightPWM.changeDutyCycle(BASE_SPEED)
     leftPWM.changeDutyCycle(BASE_SPEED)
 
-def moveBackward(rightPWM, leftPWM):
+def moveBackward(rightPWM, leftPWM, speed):
     gpio.output(IN1, gpio.HIGH)
     gpio.output(IN2, gpio.LOW)
     gpio.output(IN3, gpio.HIGH)
     gpio.output(IN4, gpio.LOW)
-    rightPWM.changeDutyCycle(REVERSE_SPEED)
-    leftPWM.changeDutyCycle(REVERSE_SPEED)
+    rightPWM.changeDutyCycle(speed)
+    leftPWM.changeDutyCycle(speed)
 
 def stop(rightPWM, leftPWM):
     gpio.output(IN1, gpio.LOW)
@@ -195,39 +195,7 @@ def detectLine(frame):
     intersection = False
 
     kernel = np.ones((5, 5), np.uint8)
-        
-    if len(priorityColors) > 0:
-        for color in ['red', 'blue', 'green', 'yellow']:
-            if color in priorityColors:
-                if color == 'red':
-                    mask = cv2.inRange(hsv, lower_red, upper_red)
-                elif color == 'blue':
-                    mask = cv2.inRange(hsv, lower_blue, upper_blue)
-                elif color == 'green':
-                    mask = cv2.inRange(hsv, lower_green, upper_green)
-                elif color == 'yellow':
-                    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-                
-                mask = cv2.erode(mask, kernel, iterations=1)
-                mask = cv2.dilate(mask, kernel, iterations=1)
-                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                if contours:
-                    validContours = [cnt for cnt in contours if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
-                    if len(validContours) > 1:
-                        intersection = True
-                    if validContours:
-                        largestContour = max(validContours, key=cv2.contourArea)
-                        area = cv2.contourArea(largestContour)
-                        M = cv2.moments(largestContour)
-                        if M["m00"] != 0:
-                            cx = int(M["m10"] / M["m00"])
-                            cy = int(M["m01"] / M["m00"])
-                            cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
-                            error = cx - centerX
-                            cv2.line(frame, (centerX, cy), (cx, cy), (0, 255, 0), 2)
-                            cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                            return error, True, intersection
-    
+
     global allContours
     allContours = []
     if len(priorityColors) > 0:  # User wants to follow colored line
@@ -350,6 +318,12 @@ def detectLine(frame):
 
 
 cam = setupCam()
+rightPWM, leftPWM, servoPWM = setupGPIO()
+state = 'NORMAL'
+reverseStartTime = 0
+currentScanIndex = 0
+scanStartTime = 0
+detectedScanAngle = None
 
 try:
     priorityInput = input("Enter the colors that you want to follow")
@@ -367,3 +341,72 @@ try:
 
     while True:
         frame = cam.capture_array()
+        detectLine(frame)
+        global allContours
+        cv2.imshow("Line follower", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+        if state == "NORMAL":
+            if allContours[0][1]:
+                if allContours[0][0] > TURN_THRESHOLD:
+                    pivotturnRight(rightPWM, leftPWM)
+                    print("Turning right")
+                elif allContours[0][0] < -TURN_THRESHOLD:
+                    pivotturnLeft(rightPWM, leftPWM)
+                    print("Turning left")
+                else:
+                    moveForward(rightPWM, leftPWM)
+                    print("Moving forward")
+            else:
+                print("Line lost. Reversing...")
+                state = "REVERSING"
+                reverseStartTime = time.time()
+                moveBackward(rightPWM, leftPWM, REVERSE_SPEED)
+
+        elif state == "REVERSING":
+            if time.time() - reverseStartTime > REVERSE_DURATION:
+                stop(rightPWM, leftPWM)
+                state = "SCANNING"
+                print("Reversing complete. Scanning.")
+                currentScanIndex = 0
+                setServoAngleSimple(servoPWM, SCAN_ANGLES[currentScanIndex])
+                scanStartTime = time.time()
+
+        elif state == "SCANNING":
+            if time.time() - scanStartTime >= SCAN_TIME_PER_ANGLE:
+                frame = cam.capture_array()
+                detectLine(frame)
+                if allContours[0][2]:
+                    print("Intersection detected.")
+                    setServoAngleSimple(servoPWM, 90)
+                    state = "NORMAL"
+                elif allContours[0][1]:
+                    detectedScanAngle = SCAN_ANGLES[currentScanIndex]
+                    print(f"Detected angle: {detectedScanAngle}")
+                    state = "TURNING"
+                else:
+                    currentScanIndex += 1
+                    if currentScanIndex < len(SCAN_ANGLES):
+                        setServoAngleSimple(servoPWM, SCAN_ANGLES[currentScanIndex])
+                        scanStartTime = time.time()
+                    else:
+                        print("No line detected. Reversing.")
+                        state = "REVERSING"
+                        moveBackward(rightPWM, leftPWM, REVERSE_SPEED)
+                        reverseStartTime = time.time()
+        
+        elif state == "TURNING":
+            if detectedScanAngle is not None:
+                turnWithScannedAngle(detectedScanAngle, servoPWM, rightPWM, leftPWM)
+            state = "NORMAL"
+    
+except KeyboardInterrupt:
+    print("Program interrupted by user.")
+finally:
+    stop(rightPWM, leftPWM)
+    setServoAngleSimple(servoPWM, 90)
+    gpio.cleanup()
+    cam.close()
+    cv2.destroyAllWindows()
+    print("GPIO cleaned up and program terminated.")
