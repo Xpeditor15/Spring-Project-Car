@@ -1,3 +1,11 @@
+#uses face_recognition module, should be used if face_detection can be installed
+
+#1. use pip to install
+#2. use git to clone the directory then install 
+# git clone https://github.com/ageitgey/face_recognition.git
+# cd face_recognition
+# pip install .
+
 import cv2
 import face_recognition
 import numpy as np
@@ -20,7 +28,7 @@ def setupCam():
     config = picam2.create_preview_configuration(main={"size": (320, 240)})
     picam2.configure(config)
     picam2.start()
-\    return picam2
+    return picam2
 
 cam = setupCam()
 
