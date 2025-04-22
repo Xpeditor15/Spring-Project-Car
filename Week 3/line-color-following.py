@@ -52,6 +52,16 @@ def left_encoder_callback(channel):
     global left_counter
     left_counter += 1
 
+def setServoAngleSimple(servoPWM, angle):
+    if angle < 0:
+        angle = 0
+    elif angle > 180:
+        angle = 180
+    duty = SERVO_MIN_DUTY + (angle / 180.0) * (SERVO_MAX_DUTY - SERVO_MIN_DUTY)
+    servoPWM.changeDutyCycle(duty)
+    time.sleep(0.3)
+    servoPWM.changeDutyCycle(0)  # Stop sending PWM signal to the servo
+
 def pivotturnRight(rightPWM, leftPWM):
     gpio.output(IN1, gpio.HIGH)
     gpio.output(IN2, gpio.LOW)
@@ -97,7 +107,6 @@ def setupCam():
     cam.configure(cam.create_preview_configuration(main={"size": (FRAME_WIDTH, FRAME_HEIGHT)}))
     cam.start()
     return cam
-
 
 # GPIO setup
 def setupGPIO():
@@ -186,87 +195,6 @@ def detectLine(frame):
     intersection = False
 
     kernel = np.ones((5, 5), np.uint8)
-
-    #For black
-    maskBlack = cv2.inRange(hsv, lower_black, upper_black)
-    maskBlack = cv2.erode(maskBlack, kernel, iterations=1)
-    maskBlack = cv2.dilate(maskBlack, kernel, iterations=1)
-    contoursBlack, _ = cv2.findContours(maskBlack, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contoursBlack:
-        validContoursBlack = [cnt for cnt in contoursBlack if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
-        if len(validContoursBlack) > 1:
-            intersection = True
-        if validContoursBlack:
-            largestContour = max(validContoursBlack, key=cv2.contourArea)
-            area = cv2.contourArea(largestContour)
-
-    if all(color not in priorityColors for color in ['red', 'blue', 'green', 'yellow']): #Only wants to follow black line
-        if len(validContoursBlack) > 0:
-            largestContour = max(validContoursBlack, key=cv2.contourArea)
-            area = cv2.contourArea(largestContour)
-            M = cv2.moments(largestContour)
-
-
-        
-    #For red
-    maskRed = cv2.inRange(hsv, lower_red, upper_red)
-    maskRed = cv2.erode(maskRed, kernel, iterations=1)
-    maskRed = cv2.dilate(maskRed, kernel, iterations=1)
-    contoursRed, _ = cv2.findContours(maskRed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contoursRed:
-        validContoursRed = [cnt for cnt in contoursRed if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
-
-    #For blue
-    maskBlue = cv2.inRange(hsv, lower_blue, upper_blue)
-    maskBlue = cv2.erode(maskBlue, kernel, iterations=1)
-    maskBlue = cv2.dilate(maskBlue, kernel, iterations=1)
-    contoursBlue, _ = cv2.findContours(maskBlue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contoursBlue:
-        validContoursBlue = [cnt for cnt in contoursBlue if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
-
-    #For green
-    maskGreen = cv2.inRange(hsv, lower_green, upper_green)
-    maskGreen = cv2.erode(maskGreen, kernel, iterations=1)
-    maskGreen = cv2.dilate(maskGreen, kernel, iterations=1)
-    contoursGreen, _ = cv2.findContours(maskGreen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contoursGreen:
-        validContoursGreen = [cnt for cnt in contoursGreen if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
-
-    #For yellow
-    maskYellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
-    maskYellow = cv2.erode(maskYellow, kernel, iterations=1)
-    maskYellow = cv2.dilate(maskYellow, kernel, iterations=1)
-    contoursYellow, _ = cv2.findContours(maskYellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contoursYellow:
-        validContoursYellow = [cnt for cnt in contoursYellow if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
-
-    allContours = []
-    if 'blue' in priorityColors and len(validContoursBlack) > 0:
-        largestContour = max(validContoursBlue, key=cv2.contourArea)
-        
-    
-
-    if all(color not in priorityColors for color in ['red', 'blue', 'green', 'yellow']): #Only wants to follow black line
-        if len(validContoursBlack) > 0:
-            largestContour = max(validContoursBlack, key=cv2.contourArea)
-            area = cv2.contourArea(largestContour)
-            M = cv2.moments(largestContour)
-
-
-    else:
-        
-
-        
-
-
-
-
-def detectLine(frame):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    centerX = FRAME_WIDTH // 2
-    intersection = False
-
-    kernel = np.ones((5, 5), np.uint8)
         
     if len(priorityColors) > 0:
         for color in ['red', 'blue', 'green', 'yellow']:
@@ -300,8 +228,8 @@ def detectLine(frame):
                             cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
                             return error, True, intersection
     
+    global allContours
     allContours = []
-
     if len(priorityColors) > 0:  # User wants to follow colored line
         if 'red' in priorityColors:
             maskRed = cv2.inRange(hsv, lower_red, upper_red)
@@ -326,35 +254,99 @@ def detectLine(frame):
                         cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
                         allContours.append = [error, True, intersection]
             
+        if 'blue' in priorityColors:
+            maskBlue = cv2.inRange(hsv, lower_blue, upper_blue)
+            maskBlue = cv2.erode(maskBlue, kernel, iterations=1)
+            maskBlue = cv2.dilate(maskBlue, kernel, iterations=1)
+            contoursBlue, _ = cv2.findContours(maskBlue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contoursBlue:
+                validContoursBlue = [cnt for cnt in contoursBlue if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
+                if len(validContoursBlue) > 1:
+                    intersection = True
+                if validContoursBlue:
+                    largestContour = max(validContoursBlue, key=cv2.contourArea)
+                    area = cv2.contourArea(largestContour)
+                    M = cv2.moments(largestContour)
+                    cv2.drawContours(frame, [largestContour], -1, (0, 255, 0), 2)
+                    if M["m00"] != 0:
+                        cx = int(M["m10"] / M["m00"])
+                        cy = int(M["m01"] / M["m00"])
+                        cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
+                        error = cx - centerX
+                        cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
+                        cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                        allContours.append = [error, True, intersection]
         
-
-
+        if 'green' in priorityColors:
+            maskGreen = cv2.inRange(hsv, lower_green, upper_green)
+            maskGreen = cv2.erode(maskGreen, kernel, iterations=1)
+            maskGreen = cv2.dilate(maskGreen, kernel, iterations=1)
+            contoursGreen, _ = cv2.findContours(maskGreen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contoursGreen:
+                validContoursGreen = [cnt for cnt in contoursGreen if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
+                if len(validContoursGreen) > 1:
+                    intersection = True
+                if validContoursGreen:
+                    largestContour = max(validContoursGreen, key=cv2.contourArea)
+                    area = cv2.contourArea(largestContour)
+                    M = cv2.moments(largestContour)
+                    cv2.drawContours(frame, [largestContour], -1, (0, 255, 0), 2)
+                    if M["m00"] != 0:
+                        cx = int(M["m10"] / M["m00"])
+                        cy = int(M["m01"] / M["m00"])
+                        cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
+                        error = cx - centerX
+                        cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
+                        cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                        allContours.append = [error, True, intersection]
         
-
-
-    mask = cv2.inRange(hsv, lower_black, upper_black)
-    mask = cv2.erode(mask, kernel, iterations=1)
-    mask = cv2.dilate(mask, kernel, iterations=1)
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contours:
-        validContours = [cnt for cnt in contours if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
-        if len(validContours) > 1:
+        if 'yellow' in priorityColors:
+            maskYellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+            maskYellow = cv2.erode(maskYellow, kernel, iterations=1)
+            maskYellow = cv2.dilate(maskYellow, kernel, iterations=1)
+            contoursYellow, _ = cv2.findContours(maskYellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contoursYellow:
+                validContoursYellow = [cnt for cnt in contoursYellow if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
+                if len(validContoursYellow) > 1:
+                    intersection = True
+                if validContoursYellow:
+                    largestContour = max(validContoursYellow, key=cv2.contourArea)
+                    area = cv2.contourArea(largestContour)
+                    M = cv2.moments(largestContour)
+                    cv2.drawContours(frame, [largestContour], -1, (0, 255, 0), 2)
+                    if M["m00"] != 0:
+                        cx = int(M["m10"] / M["m00"])
+                        cy = int(M["m01"] / M["m00"])
+                        cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
+                        error = cx - centerX
+                        cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
+                        cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                        allContours.append = [error, True, intersection]
+        
+    maskBlack = cv2.inRange(hsv, lower_black, upper_black)
+    maskBlack = cv2.erode(maskBlack, kernel, iterations=1)
+    maskBlack = cv2.dilate(maskBlack, kernel, iterations=1)
+    contoursBlack, _ = cv2.findContours(maskBlack, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contoursBlack:
+        validContoursBlack = [cnt for cnt in contoursBlack if cv2.contourArea(cnt) > MIN_CONTOUR_AREA]
+        if len(validContoursBlack) > 1:
             intersection = True
-        if validContours:
-            largestContour = max(validContours, key=cv2.contourArea)
+        if validContoursBlack:
+            largestContour = max(validContoursBlack, key=cv2.contourArea)
             area = cv2.contourArea(largestContour)
             M = cv2.moments(largestContour)
             cv2.drawContours(frame, [largestContour], -1, (0, 255, 0), 2)
             if M["m00"] != 0:
                 cx = int(M["m10"] / M["m00"])
-                cy = int(M["m01"] / M["m00"])
+                cy = int(M["m01"] /M["m00"])
                 cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
                 error = cx - centerX
                 cv2.line(frame, (centerX, cy), (cx, cy), (0, 255, 0), 2)
                 cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                return error, True, intersection
-    
-    return 0, False, intersection
+                allContours.append = [error, True, intersection]
+
+    if len(allContours) == 0:
+        allContours[0] = [0, False, intersection]
 
 
 cam = setupCam()
