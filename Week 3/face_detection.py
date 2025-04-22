@@ -20,7 +20,7 @@ def setupCam():
     config = picam2.create_preview_configuration(main={"size": (320, 240)})
     picam2.configure(config)
     picam2.start()
-    return picam2
+\    return picam2
 
 cam = setupCam()
 
