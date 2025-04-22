@@ -1,4 +1,4 @@
-#this uses basic template matching for image detection
+#this uses basic template matching for image detection (not working)
 
 import cv2
 import numpy as np
