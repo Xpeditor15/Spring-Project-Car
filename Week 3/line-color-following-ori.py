@@ -81,7 +81,7 @@ def pivotturnLeft(rightPWM, leftPWM):
 def moveForward(rightPWM, leftPWM):
     gpio.output(IN1, gpio.LOW)
     gpio.output(IN2, gpio.HIGH)
-    gpio.output(IN3, gpio.LOw)
+    gpio.output(IN3, gpio.LOW)
     gpio.output(IN4, gpio.HIGH)
     rightPWM.ChangeDutyCycle(BASE_SPEED)
     leftPWM.ChangeDutyCycle(BASE_SPEED)
@@ -150,8 +150,7 @@ def turnWithScannedAngle(scannedAngle, servoPWM, rightPWM, leftPWM):
     time.sleep(turnTime)
     stop(rightPWM, leftPWM)
 
-"""
-def calibrateColor(frame):
+def calibrateColors(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     h, s, v = hsv[FRAME_HEIGHT // 2, FRAME_WIDTH // 2]
     print(f"HSV value at center: H={h}, S={s}, V={v}")
@@ -165,75 +164,30 @@ def calibrateColor(frame):
     global lower_black, upper_black
 
     while True:
-        cv2.imshow('calibrating', frame)
-        color = input("Press 'r' to calibrate red, 'b' for blue, 'g' for green, 'y' for yellow, 'k' for black, or 'q' to quit.")
-        if color == 'r':
+        print("Press 'r' to calibrate red, 'b' for blue, 'g' for green, 'y' for yellow, 'k' for black, or 'q' to quit.")
+        key = cv2.waitKey(0) & 0xFF
+        if key == ord('r'):
             lower_red = np.array([h - 10, s - 30, v - 30])
             upper_red = np.array([h + 10, s + 30, v + 30])
             print(f"Red range: {lower_red}, {upper_red}")
-        elif color == 'b':
+        elif key == ord('b'):
             lower_blue = np.array([h - 10, s - 30, v - 30])
             upper_blue = np.array([h + 10, s + 30, v + 30])
             print(f"Blue range: {lower_blue}, {upper_blue}")
-        elif color == 'g':
+        elif key == ord('g'):
             lower_green = np.array([h - 10, s - 30, v - 30])
             upper_green = np.array([h + 10, s + 30, v + 30])
             print(f"Green range: {lower_green}, {upper_green}")
-        elif color == 'y':
+        elif key == ord('y'):
             lower_yellow = np.array([h - 10, s - 30, v - 30])
             upper_yellow = np.array([h + 10, s + 30, v + 30])
             print(f"Yellow range: {lower_yellow}, {upper_yellow}")
-        elif color == 'k':
+        elif key == ord('k'):
             lower_black = np.array([0, 0, 0])
             upper_black = np.array([180, s + 50, v + 50])
             print(f"Black range: {lower_black}, {upper_black}")
-        elif color == 'q':
+        elif key == ord('q'):
             break
-
-def calibrateColor(event, x, y, param):
-    global lower_red, upper_red
-    global lower_green, upper_green
-    global lower_blue, upper_blue
-    global lower_yellow, upper_yellow
-    global lower_black, upper_black
-
-    if event == cv2.EVENT_LBUTTONDOWN:
-        hsv_frame = param["hsv_frame"]
-        h, s, v = hsv_frame[y, x]
-        color_name = param["color_name"]
-        print(f"{color_name} HSV value at ({x},{y}): H={h}, S={s}, V={v}")
-
-        param["h_values"].append(h)
-        param["s_values"].append(s)
-        param["v_values"].append(v)
-
-        if len(param["h_values"]) > 0:
-            h_min, h_max = max(0, min(param["h_values"]) - 10), min(180, max(param["h_values"]) + 10)
-            s_min, s_max = max(0, min(param["s_values"]) - 30), min(255, max(param["s_values"]) + 30)
-            v_min, v_max = max(0, min(param["v_values"]) - 30), min(255, max(param["v_values"]) + 30)
-
-            print(f"Suggested range for {color_name}:")
-            print(f"lower_{color_name} = np.array([{h_min}, {s_min}, {v_min}])")
-            print(f"upper_{color_name} = np.array([{h_max}, {s_max}, {v_max}])")
-
-            if color_name == "red" and h_min < 10 and h_max > 170:
-                print("Red color wraps around, consider using two ranges:")
-                print(f"lower_red1 = np.array([0, {s_min}, {v_min}])")
-                print(f"upper_red1 = np.array([10, {s_max}, {v_max}])")
-                print(f"lower_red2 = np.array([170, {s_min}, {v_min}])")
-                print(f"upper_red2 = np.array([180, {s_max}, {v_max}])")
-"""
-
-def calibrateColor(event, x, y, flags, param):
-    if event == cv2.EVENT_LBUTTONDOWN:
-        hsvFrame = param['frame']
-        h, s, v = hsvFrame[y, x]
-        print(f"HSV value at ({x},{y}): H={h}, S={s}, V={v}")
-
-        param['lowerBound'] = np.array([h - 10, s - 30, v - 30])
-        param['upperBound'] = np.array([h + 10, s + 30, v + 30])
-        print(f"Suggested range: {param['lowerBound']}, {param['upperBound']}")
-
 
 def detectLine(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -243,12 +197,6 @@ def detectLine(frame):
     kernel = np.ones((5, 5), np.uint8)
 
     global allContours
-    global upper_red, lower_red
-    global upper_blue, lower_blue
-    global upper_green, lower_green
-    global upper_yellow, lower_yellow
-    global upper_black, lower_black
-
     allContours = []
     if len(priorityColors) > 0:  # User wants to follow colored line
         if 'red' in priorityColors:
@@ -272,7 +220,7 @@ def detectLine(frame):
                         error = cx - centerX
                         cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
                         cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-                        allContours.append = [error, True, intersection]
+                        allContours.append([error, True, intersection])
             
         if 'blue' in priorityColors:
             maskBlue = cv2.inRange(hsv, lower_blue, upper_blue)
@@ -295,7 +243,7 @@ def detectLine(frame):
                         error = cx - centerX
                         cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
                         cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-                        allContours.append = [error, True, intersection]
+                        allContours.append([error, True, intersection])
         
         if 'green' in priorityColors:
             maskGreen = cv2.inRange(hsv, lower_green, upper_green)
@@ -318,7 +266,7 @@ def detectLine(frame):
                         error = cx - centerX
                         cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
                         cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-                        allContours.append = [error, True, intersection]
+                        allContours.append([error, True, intersection])
         
         if 'yellow' in priorityColors:
             maskYellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
@@ -341,7 +289,7 @@ def detectLine(frame):
                         error = cx - centerX
                         cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
                         cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-                        allContours.append = [error, True, intersection]
+                        allContours.append([error, True, intersection])
         
     maskBlack = cv2.inRange(hsv, lower_black, upper_black)
     maskBlack = cv2.erode(maskBlack, kernel, iterations=1)
@@ -363,10 +311,10 @@ def detectLine(frame):
                 error = cx - centerX
                 cv2.line(frame, (centerX, cy), (cx, cy), (0, 255, 0), 2)
                 cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                allContours.append = [error, True, intersection]
+                allContours.append([error, True, intersection])
 
     if len(allContours) == 0:
-        allContours[0] = [0, False, intersection]
+        allContours.append([0, False, intersection])
 
 
 cam = setupCam()
@@ -377,11 +325,19 @@ currentScanIndex = 0
 scanStartTime = 0
 detectedScanAngle = None
 
-ifCalibrated = False
+lower_red = np.array([352, 97, 75])
+upper_red = np.array([352, 88, 82])
+lower_blue = np.array([220, 110, 24])
+upper_blue = np.array([220, 75, 31])
+lower_green = np.array([47, 86, 82])
+upper_green = np.array([47, 82, 86])
+lower_yellow = np.array([46, 81, 84])
+upper_yellow = np.array([46, 78, 88])
+lower_black = np.array([0, 0, 0])
+upper_black = np.array([180, 255, 120])
 
 try:
-    # Initialize the camera
-    priorityInput = input("Enter the colors that you want to follow\n")
+    priorityInput = input("Enter the colors that you want to follow")
     priorityColors = []
     if 'b' in priorityInput:
         priorityColors.append("blue")
@@ -397,20 +353,6 @@ try:
 
     while True:
         frame = cam.capture_array()
-        if not ifCalibrated:
-            global upper_red, lower_red
-            global upper_blue, lower_blue
-            global upper_green, lower_green
-            global upper_yellow, lower_yellow
-            global upper_black, lower_black
-
-            color = input('Press the color to calibrate: ')
-            if color == 'r':
-                cv2.setMouseCallback("Calibration", calibrateColor, param={'frame': frame, 'lowerBound': lower_red, 'upperBound': None})
-            cv2.imshow("Calibration", frame)
-            cv2.setMouseCallback("Calibration", calibrateColor, param={'frame': frame, 'lowerBound': None, 'upperBound': None})
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
         detectLine(frame)
         global allContours
         cv2.imshow("Line follower", frame)
