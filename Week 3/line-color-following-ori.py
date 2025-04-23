@@ -290,6 +290,8 @@ def detectLine(frame):
                         cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
                         cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
                         allContours.append([error, True, intersection])
+    
+    
         
     maskBlack = cv2.inRange(hsv, lower_black, upper_black)
     maskBlack = cv2.erode(maskBlack, kernel, iterations=1)
@@ -325,14 +327,14 @@ currentScanIndex = 0
 scanStartTime = 0
 detectedScanAngle = None
 
-lower_red = np.array([352, 97, 75])
-upper_red = np.array([352, 88, 82])
-lower_blue = np.array([220, 110, 24])
-upper_blue = np.array([220, 75, 31])
-lower_green = np.array([47, 86, 82])
-upper_green = np.array([47, 82, 86])
-lower_yellow = np.array([46, 81, 84])
-upper_yellow = np.array([46, 78, 88])
+lower_red = np.array([353, 100, 71])
+upper_red = np.array([352, 84, 86])
+lower_blue = np.array([228, 100, 20])
+upper_blue = np.array([220, 67, 35])
+lower_green = np.array([47, 95, 75])
+upper_green = np.array([47, 78, 90])
+lower_yellow = np.array([46, 90, 76])
+upper_yellow = np.array([46, 74, 92])
 lower_black = np.array([0, 0, 0])
 upper_black = np.array([180, 255, 120])
 
