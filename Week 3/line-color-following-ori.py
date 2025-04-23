@@ -23,8 +23,8 @@ SERVO_MAX_DUTY = 12.5      # Duty cycle for 180 degrees
 SERVO_FREQ = 50            # 50Hz frequency for servo
 
 # Line following parameters
-BASE_SPEED = 50           # Base motor speed (0-100) original 40
-TURN_SPEED = 65            # Speed for pivot turns (0-100) original 50
+BASE_SPEED = 30           # Base motor speed (0-100) original 40
+TURN_SPEED = 75            # Speed for pivot turns (0-100) original 50
 MIN_CONTOUR_AREA = 250    # Minimum area for valid contours
 FRAME_WIDTH = 320          # Camera frame width
 FRAME_HEIGHT = 240         # Camera frame height
@@ -290,9 +290,21 @@ def detectLine(frame):
                         cv2.line(frame, (centerX, cy), (cx, cy), (255, 0, 0), 2)
                         cv2.putText(frame, f"Error: {error}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
                         allContours.append([error, True, intersection])
+
+        try:
+            for contours in allContours:
+                if contours[1]:
+                    print("Detected color line")
+                    return
+                else:
+                    pass
+        except Exception as e:
+            print("No contours")
     
-    
-        
+    if len(allContours) == 0:
+        print("No contours detected.")
+    if len(priorityColors) == 0:
+        print("No line chosen")
     maskBlack = cv2.inRange(hsv, lower_black, upper_black)
     maskBlack = cv2.erode(maskBlack, kernel, iterations=1)
     maskBlack = cv2.dilate(maskBlack, kernel, iterations=1)
@@ -327,14 +339,14 @@ currentScanIndex = 0
 scanStartTime = 0
 detectedScanAngle = None
 
-lower_red = np.array([353, 100, 71])
-upper_red = np.array([352, 84, 86])
-lower_blue = np.array([228, 100, 20])
-upper_blue = np.array([220, 67, 35])
-lower_green = np.array([47, 95, 75])
-upper_green = np.array([47, 78, 90])
-lower_yellow = np.array([46, 90, 76])
-upper_yellow = np.array([46, 74, 92])
+lower_red = np.array([350, 80, 60])
+upper_red = np.array([355, 100, 100])
+lower_blue = np.array([223, 78, 35])
+upper_blue = np.array([228, 96, 94])
+lower_green = np.array([160, 86, 55])
+upper_green = np.array([162, 87, 59])
+lower_yellow = np.array([43, 80, 60])
+upper_yellow = np.array([50, 100, 100])
 lower_black = np.array([0, 0, 0])
 upper_black = np.array([180, 255, 120])
 
