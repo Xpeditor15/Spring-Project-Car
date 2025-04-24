@@ -2,7 +2,10 @@ import RPi.GPIO as GPIO
 import time
 import numpy as np
 import cv2
+import os
+import math
 from picamera2 import Picamera2
+from tflite_runtime.interpreter import Interpreter
 
 # Define GPIO pins
 IN1, IN2 = 23, 24         # Left motor control
@@ -37,8 +40,25 @@ REVERSE_DURATION = 0.3     # Seconds to reverse
 REVERSE_SPEED = 40         # Speed when reversing
 
 # Updated scanning angles: center at 90, right at 45, left at 135.
-SCAN_ANGLES = [90, 45, 135]
+SCAN_ANGLES = [90, 30, 120]
 SCAN_TIME_PER_ANGLE = 0.5   # Seconds to wait per scan angle
+
+# Color ranges
+LOWERBLACK = np.array([0, 0, 0])
+UPPERBLACK = np.array([180, 255, 120])  # Include dark gray
+LOWERRED1 = np.array([0, 150, 70])
+UPPERRED1 = np.array([10, 255, 255])
+LOWERRED2 = np.array([170, 150, 70])
+UPPERRED2 = np.array([180, 255, 255])
+LOWERGREEN = np.array([60, 100, 70])
+UPPERGREEN = np.array([90, 255, 255]) # Previous color ranges
+LOWERYELLOW = np.array([20, 150, 100])
+UPPERYELLOW = np.array([35, 255, 255])
+
+#LOWERGREEN = np.array([40, 70, 60])
+#UPPERGREEN = np.array([80, 255, 255])
+#LOWERBLUE = np.array([100, 150, 60])
+#UPPERBLUE = np.array([140, 255, 255]) I think is better
 
 # Variables to store encoder counts
 right_counter = 0
